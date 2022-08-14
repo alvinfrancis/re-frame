@@ -1,12 +1,11 @@
 (ns re-frame.trace
   "Tracing for re-frame.
   Alpha quality, subject to change/break at any time."
-  #?(:cljs (:require-macros [net.cgrand.macrovich :as macros]
-                            [re-frame.trace :refer [finish-trace with-trace merge-trace!]]))
   (:require [re-frame.interop :as interop]
             [re-frame.loggers :refer [console]]
-            #?(:clj [net.cgrand.macrovich :as macros])
-            #?(:cljs [goog.functions])))
+            #?(:cljs ["google-closure-library"])))
+
+(js/goog.require "goog.functions")
 
 (def id (atom 0))
 (def ^:dynamic *current-trace* nil)
@@ -67,7 +66,7 @@
 (def debounce-time 50)
 
 (defn debounce [f interval]
-  #?(:cljs (goog.functions/debounce f interval)
+  #?(:cljs (js/goog.functions.debounce f interval)
      :clj  (f)))
 
 (def schedule-debounce
@@ -96,34 +95,32 @@
     ;; it's good enough for our purposes here.
     (reset! next-delivery (+ now debounce-time))))
 
-(macros/deftime
-  (defmacro finish-trace [trace]
-     `(when (is-trace-enabled?)
-        (let [end#      (interop/now)
-              duration# (- end# (:start ~trace))]
-          (swap! traces conj (assoc ~trace
-                               :duration duration#
-                               :end (interop/now)))
-          (run-tracing-callbacks! end#))))
+(defmacro finish-trace [trace]
+  `(when (is-trace-enabled?)
+     (let [end#      (interop/now)
+           duration# (- end# (:start ~trace))]
+       (swap! traces conj (assoc ~trace
+                                 :duration duration#
+                                 :end (interop/now)))
+       (run-tracing-callbacks! end#))))
 
- (defmacro with-trace
-     "Create a trace inside the scope of the with-trace macro
-
+(defmacro with-trace
+  "Create a trace inside the scope of the with-trace macro
           Common keys for trace-opts
           :op-type - what kind of operation is this? e.g. :sub/create, :render.
           :operation - identifier for the operation, for a subscription it would be the subscription keyword
           :tags - a map of arbitrary kv pairs"
-     [{:keys [operation op-type tags child-of] :as trace-opts} & body]
-     `(if (is-trace-enabled?)
-        (binding [*current-trace* (start-trace ~trace-opts)]
-          (try ~@body
-               (finally (finish-trace *current-trace*))))
-        (do ~@body)))
+  [{:keys [operation op-type tags child-of] :as trace-opts} & body]
+  `(if (is-trace-enabled?)
+     (binding [*current-trace* (start-trace ~trace-opts)]
+       (try ~@body
+            (finally (finish-trace *current-trace*))))
+     (do ~@body)))
 
-  (defmacro merge-trace! [m]
-     ;; Overwrite keys in tags, and all top level keys.
-     `(when (is-trace-enabled?)
-        (let [new-trace# (-> (update *current-trace* :tags merge (:tags ~m))
-                             (merge (dissoc ~m :tags)))]
-          (set! *current-trace* new-trace#))
-        nil)))
+(defmacro merge-trace! [m]
+  ;; Overwrite keys in tags, and all top level keys.
+  `(when (is-trace-enabled?)
+     (let [new-trace# (-> (update *current-trace* :tags merge (:tags ~m))
+                          (merge (dissoc ~m :tags)))]
+       (set! *current-trace* new-trace#))
+     nil))

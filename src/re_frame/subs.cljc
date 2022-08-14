@@ -1,7 +1,8 @@
 (ns re-frame.subs
  (:require
    [re-frame.db        :refer [app-db]]
-   [re-frame.interop   :refer [add-on-dispose! debug-enabled? make-reaction ratom? deref? dispose! reagent-id]]
+   [re-frame.interop   :refer [add-on-dispose! debug-enabled? make-reaction ;ratom?
+                               deref? dispose! reagent-id]]
    [re-frame.loggers   :refer [console]]
    [re-frame.utils     :refer [first-in-vector]]
    [re-frame.registrar :refer [get-handler clear-handlers register-handler]]
@@ -97,7 +98,8 @@
              handler-fn (get-handler kind query-id)]
          (trace/merge-trace! {:tags {:cached? false}})
          (when debug-enabled?
-           (when-let [not-reactive (not-empty (remove ratom? dynv))]
+           ;; NOTE: ratom? not implemented.
+           #_(when-let [not-reactive (not-empty (remove ratom? dynv))]
              (console :warn "re-frame: your subscription's dynamic parameters that don't implement IReactiveAtom:" not-reactive)))
          (if (nil? handler-fn)
            (do (trace/merge-trace! {:error true})
